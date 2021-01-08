@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#PBS -q omp
+#PBS -l ncpus=8
+#PBS -l mem=50gb
+#PBS -l walltime=6:10:00
+
+. /appli/bioinfo/cd-hit/4.8.1/env.sh
+
+cd $PBS_O_WORKDIR
+
+
+TIMESTAMP=$(date +%Y-%m-%d_%Hh%Mm%Ss)
+SCRIPT=$0
+NAME=$(basename $0)
+LOG_FOLDER="98_log_files"
+cp $SCRIPT $LOG_FOLDER/"$TIMESTAMP"_"$NAME"
+
+cd-hit-est -i $HOME/01_sauvegarde/Trinity_jaccard.fasta -o $SCRATCH/cdhit_jaccard/Trinity_jaccard_95 -c 0.95 -n 9 -d 0 -M 50000 -T 8  2>&1 | tee 98_log_files/"$TIMESTAMP"_95.log
