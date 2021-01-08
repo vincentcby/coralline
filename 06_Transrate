@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+#PBS -q omp
+#PBS -l ncpus=25
+#PBS -l mem=100gb
+#PBS -l walltime=07:00:00
+
+. /appli/bioinfo/transrate/1.0.3/env.sh
+
+cd $PBS_O_WORKDIR
+
+
+TIMESTAMP=$(date +%Y-%m-%d_%Hh%Mm%Ss)
+SCRIPT=$0
+NAME=$(basename $0)
+LOG_FOLDER="98_log_files"
+cp $SCRIPT $LOG_FOLDER/"$TIMESTAMP"_"$NAME"
+
+left="--left  $READSLEFT"
+
+transrate --assembly $SCRATCH/Trinity_jaccard_95.fasta --left 04_merged/all_reads.left.fq --right 04_merged/all_reads.right.fq --threads 25 --output 06_transrate_jaccard_SS 2>&1 | tee 98_log_files/"$TIMESTAMP"_trans.log
