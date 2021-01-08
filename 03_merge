@@ -1,1 +1,31 @@
+#!/usr/bin/env bash
+#PBS -q omp
+#PBS -l ncpus=4
+#PBS -l mem=40gb
+#PBS -l walltime=01:00:00
+
+cd $PBS_O_WORKDIR
+
+TIMESTAMP=$(date +%Y-%m-%d_%Hh%Mm%Ss)
+SCRIPT=$0
+NAME=$(basename $0)
+LOG_FOLDER="98_log_files"
+cp $SCRIPT $LOG_FOLDER/"$TIMESTAMP"_"$NAME"
+
+INPUTFOLDER="01_trimmed/files"   #contient tous les reads trimmés à Q30 avec Trimgalore sauf ceux des 2 échantillons contaminés
+OUTPUTFOLDER="$SCRATCH/04_allmerged"
+
+	cat "$INPUTFOLDER"/*_val_1.fq >> "$OUTPUTFOLDER"/all_reads.left.fq 2>&1 | tee $DATAWORK/calcite/98_log_files/"$TIMESTAMP"_left.log
+ 
+	cat "$INPUTFOLDER"/*_val_2.fq >> "$OUTPUTFOLDER"/all_reads.right.fq 2>&1 | tee $DATAWORK/calcite/98_log_files/"$TIMESTAMP"_right.log
+
+#=======
+#move to present directory
+#cd $(pwd)
+
+#cat all reads
+#	cat "$INPUTFOLDER"/*_val_1.fq > "$OUTPUTFOLDER"/all_reads.left.fq
+ 
+#	cat "$INPUTFOLDER"/*_val_2.fq > "$OUTPUTFOLDER"/all_reads.right.fq
+#>>>>>>> 8629e02ffad09c4df82ffb278128308c999cbded
 
