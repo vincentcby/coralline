@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#PBS -q omp
+#PBS -o Output2
+#PBS -l ncpus=6
+#PBS -l mem=75gb
+#PBS -l walltime=01:10:00
+
+
+. /appli/bioinfo/kallisto/0.46.2/env.sh
+ 
+cd $PBS_O_WORKDIR
+
+
+#kallisto index -i 5centile_ centile_5.fasta  #a effectuer séparément avant la boucle for
+
+for i in $(ls $DATAWORK/calcite/01_trimmed/files/*.fq|perl -pe 's/_R[12]_val_[12].fq//'|sort -u)
+do 
+
+base="$(basename $i)"
+mkdir "$base"                                   #On crée autant de dossier que d'échantillons sinon kalisto écrase à chaque étape de la boucle le count précédent
+
+kallisto quant -i 5centile_ -t 6 -o "$base" "$i"_R1_val_1.fq "$i"_R2_val_2.fq
+
+done 2>&1 | tee $SCRATCH/98_log_files/"$TIMESTAMP".kallisto.log
