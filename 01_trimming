@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Clean up
+rm 00_scripts/datarmor_jobs/TRIMG*sh
+
+# launch scripts 
+for file in $(ls 02_data/*fastq|perl -pe 's/_R[12].f(ast)?q//'|sort -u)
+
+do
+        base=$(basename "$file")
+        toEval="cat 00_scripts/03_trimgalore_pe.sh | sed 's/__BASE__/$base/g'"; eval $toEval > 00_scripts/datarmor_jobs/TRIMG_"$base".sh
+done
+
+
+#change jobs header
+
+#Submit jobs
+for i in $(ls 00_scripts/datarmor_jobs/TRIMG*sh); do qsub $i; done
