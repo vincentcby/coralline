@@ -1,0 +1,22 @@
+#!/bin/bash
+#PBS -q omp
+#PBS -l walltime=1:00:00
+#PBS -l mem=50gb
+#PBS -l ncpus=8
+
+. /appli/bioinfo/trim-galore/0.6.3/env.sh
+
+
+cd $PBS_O_WORKDIR
+
+
+TIMESTAMP=$(date +%Y-%m-%d_%Hh%Mm%Ss)
+SCRIPT=$0
+NAME=$(basename $0)
+LOG_FOLDER="98_log_files"
+cp $SCRIPT $LOG_FOLDER/"$TIMESTAMP"_"$NAME"
+
+
+base=__BASE__
+
+trim_galore -j 8 --phred33 --length 60 --fastqc_args "--outdir $SCRATCH/trimmed/02_trimmed/qc/" -q 30 -o $SCRATCH/trimmed/01_trimmed/files/ --paired 02_data/"$base"_R1.fastq 02_data/"$base"_R2.fastq >& $SCRATCH/log_1CPU 2>&1
