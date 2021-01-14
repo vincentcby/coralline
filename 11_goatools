@@ -1,1 +1,28 @@
+#!/usr/bin/env bash
+#PBS -q omp
+#PBS -l ncpus=5
+#PBS -l mem=10b
+#PBS -l walltime=01:00:00
+#PBS -o out_1
 
+
+export PATH=$PATH:/appli/anaconda/2.7/bin
+source activate $DATAWORK/mes-envs-conda/goatools
+
+
+cd $PBS_O_WORKDIR
+
+
+TIMESTAMP=$(date +%Y-%m-%d_%Hh%Mm%Ss)
+SCRIPT=$0
+NAME=$(basename $0)
+LOG_FOLDER="98_log_files"
+cp $SCRIPT $LOG_FOLDER/"$TIMESTAMP"_"$NAME"
+
+GOATOOLS=$DATAWORK/mes-envs-conda/goatools/bin/find_enrichment.py
+
+python3 $GOATOOLS --pval=0.1 --indent --obo go-basic.obo id/id_de.txt id/id_all.txt ID_GO.txt > p_01_GO_enrichment_result1 2>&1 | tee $SCRATCH/98_log_files/"$TIMESTAMP"_goatools.log
+
+python3 $GOATOOLS --pval=0.1 --indent --obo go-basic.obo id/id_1.txt id/id_all.txt ID_GO.txt > p_01_GO_enrichment_result_cluster1 2>&1 | tee $SCRATCH/98_log_files/"$TIMESTAMP"_goatools.2log
+
+python3 $GOATOOLS --pval=0.1 --indent --obo go-basic.obo id/id_2.txt id/id_all.txt ID_GO.txt > p_01_GO_enrichment_result_cluster2 2>&1 | tee $SCRATCH/98_log_files/"$TIMESTAMP"_goatools.3log
