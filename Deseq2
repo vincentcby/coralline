@@ -1,0 +1,172 @@
+####################
+# Loading packages #
+####################
+
+library("plyr")
+library("DESeq2")
+library("ggplot2")
+library("pheatmap")
+library("RColorBrewer")
+library("IHW")
+library("reshape2")
+library("dplyr")
+library("mclust")
+library("cdparcoord")
+library(Rmisc)
+library(GGally)
+library(MASS)
+library(colorspace) # get nice colors
+library(lattice)
+library("apeglm")
+library(tidyr)
+library(readr)
+library(knitr)
+library(kableExtra)
+library("RColorBrewer")
+library(tximportData)
+library(devtools)
+library(ashr)
+library(pheatmap)
+library(ggplot2)
+library(tximport)
+library(gplots)
+library(dendextend)
+library(data.table)
+
+
+###############################
+# Loading data using tximport #
+###############################
+
+
+samples <- read.table(file.path("samples.txt"), header = TRUE)
+
+Files <- file.path("kallisto5", samples$run, "abundance.tsv")
+names(Files) <- c("T28-B1-1", "T28-B1-12", "T28-B1-3", "T28-B2-1", "T28-B2-12", "T28-B3-1", "T28-B3-12", "T28-B4-1", "T28-B4-2", "T28-B4-3")
+
+tx2gene <- read.csv("tax2gene_iso.csv", header = TRUE, sep = ";" )              # on associe au transcript ID le gene ID, ici les 2 sont identiques (pour une étude de l'expression au niveau des isoformes)
+
+
+#txi <- tximport(Files, type = "kallisto", tx2gene = tx2gene, importer = read_tsv)               # tximport somme les estimated counts pour chaque isoforme
+
+sampleTable <- data.frame(condition = factor(rep(c("Condition_actuelle", "Horizons_2100"), each = 5)))     # associe les échantillons aux 2 conditions de température
+rownames(sampleTable) <- colnames(txi$counts)
+sampleTable$sample=as.factor(rownames(sampleTable))                                                         # add sample to sampleTable (utile pour la PCA il me semble pour pouvoir avoir les résultats par échantillons et pas par condition
+
+dds <- DESeqDataSetFromTximport(txi, sampleTable, ~condition)
+
+dds$condition <- relevel(dds$condition, ref = "Condition_actuelle")        # les valeurs de FC sont le ration de 2100/actules
+dds <- DESeq(dds)
+
+#res <- results(dds)                    # cutoff p-adjusted value (ou q-value) à 0,1
+#summary(res)
+
+#res05 <- results(dds, alpha=0.05)      # cutoff p-adjusted value (ou q-value) à 0,05
+#summary(res05)
+
+#res01 <- results(dds, alpha=0.01)      # cutoff p-adjusted value (ou q-value) à 0,01
+#summary(res01)
+
+#resLFC <- lfcShrink(dds, coef="condition_B_vs_A")
+#resNorm <- lfcShrink(dds, coef=2, type="normal")
+#resAsh <- lfcShrink(dds, coef=2, type="ashr")
+
+#ar(mfrow=c(1,3), mar=c(4,4,2,1))
+#xlim <- c(1,1e5); ylim <- c(-3,3)
+#plotMA(resLFC, xlim=xlim, ylim=ylim, main="apeglm")
+#plotMA(resNorm, xlim=xlim, ylim=ylim, main="normal")
+#plotMA(resAsh, xlim=xlim, ylim=ylim, main="ashr")
+
+####################
+# padj = 0.05 #
+####################
+
+# A vs B
+resDvel<- results(dds, contrast=c("condition","Condition_actuelle","Horizons_2100"),alpha=0.05) # FDR of 0.05
+summary(resDvel)
+resOrderedDvel <- resDvel[order(resDvel$pvalue),]     # Order by pvalue
+fdrDEDvel<-subset(resOrderedDvel, padj<0.05)          # Keep only padj<0.05
+finalDEDvel<-subset(fdrDEDvel,abs(log2FoldChange)>2)  # keep gene with differential expression x4
+summary(finalDEDvel)
+final_AB = data.frame(rownames(finalDEDvel))              # Retrieve rownames : genes names
+final_AB[,2] = data.frame(finalDEDvel[,"log2FoldChange"]) # Retrieve log2FoldChange
+colnames(final_AB)[1]="Gene"                              # Call first column gene
+colnames(final_AB)[2]=c("log2FoldChange")                 # Call second column log2FoldChange
+final_AB$Stade = "actuelle2100"                                     # Call third column by contrast : here "DV"
+
+
+
+## Regroupe info in one data frame  ##
+
+
+## Heatmap gene diff expr entre les differents stades
+# Concatene tous les data.frame
+AllCondtion = data.frame(final_AB) # concatene l'information de chaque comparaison en 1 seul tableau : AllCondition
+
+# data.frame lisible par heatmap
+AllCondlog2FCsup2                           = data.frame(dcast(AllCondtion, Gene ~ Stade, value.var = "log2FoldChange"))
+AllCondlog2FCsup2[is.na(AllCondlog2FCsup2)] = 0
+rownames(AllCondlog2FCsup2)                 = AllCondlog2FCsup2[,1]
+#AllCondlog2FCsup2                           = data.frame(AllCondlog2FCsup2[,c("DV")]) # Keep this data frame for EDG (ExprDiffGenes)
+
+# Retrieve matrix log 
+norm.counts     <- counts(dds, normalized=TRUE)   # Retrieve normalized countcounts
+log.norm.counts <- log2(norm.counts + 2)          # Log2 on normalized count
+
+# norm.counts<-as.data.frame(norm.counts)
+logncsubset = log.norm.counts[which(rownames(log.norm.counts) %in% rownames(AllCondlog2FCsup2)),] # Retrieve DEG (ExprDiffGenes) with AllCondlog2FCsup2
+
+logncsubset_minRowMeans = logncsubset - rowMeans(logncsubset) # En soustrayant la moyenne au log2
+subj                    = colnames(logncsubset_minRowMeans)   # Retrieve colnames of logncsubset_minRowMeans for aka2
+
+test1 <- data.frame(condition = rep(c("Condition actuelle", "Horizons 2100"), c(5,5)))
+row.names(test1) <- colnames(logncsubset_minRowMeans)
+
+
+set.seed(53) # to fix the random number used in heatmap and always keep the same cluster after a restart cession.
+# K-mean fix to 8
+out<-pheatmap(logncsubset_minRowMeans,kmeans_k=2,
+              annotation_names_col = FALSE,
+              annotation_col = test1,
+              cellheight = 20,
+              cellwidth = 20,
+              angle_col = 45,
+              cluster_cols=FALSE,
+)
+
+teste_col <- read.csv("mycluster.csv", header = TRUE, sep = ";", row.names = 1 )
+
+my_hclust_gene <- hclust(dist(logncsubset_minRowMeans), method = "complete")
+as.dendrogram(my_hclust_gene) %>%
+  plot(horiz = TRUE)
+my_gene_col <- cutree(tree = as.dendrogram(my_hclust_gene), k = 2)
+my_gene_col <- data.frame(cluster = ifelse(test = my_gene_col == 1, yes = "cluster 1", no = "cluster 2"))
+
+#Heatmap without clusters
+pheatmap(logncsubset_minRowMeans,     
+         annotation_names_col = FALSE, 
+         annotation_col = test1,
+         annotation_names_row = FALSE,
+         cluster_cols=FALSE, #not cluster samples
+         show_rownames =FALSE, #enleve le nom des genes
+         annotation_row = my_gene_col,
+         cutree_rows = 2,
+         cutree_cols = 2
+         
+)
+
+######################################
+## PCA et heatmap ##
+######################################
+
+vsd <- vst(dds, blind=FALSE)
+rld <- rlog(dds, blind=FALSE)
+
+sampleDists <- dist(t(assay(vsd)))
+sampleDistMatrix <- as.matrix(sampleDists)
+
+plotPCA(vsd, intgroup=c("condition"))
+plotPCA(vsd, intgroup=c("condition", "sample"))
+
+des <- rownames(logncsubset_minRowMeans)          # on donne la liste des isoformes DE et Fc a 4
+plotPCA(vsd[des,], c("condition","sample"), ntop = 1349)   # PCA des isoformes DE
