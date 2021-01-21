@@ -172,6 +172,7 @@ des <- rownames(logncsubset_minRowMeans)          # on donne la liste des isofor
 plotPCA(vsd[des,], c("condition","sample"), ntop = 1349)   # PCA des isoformes DE
 
 
+#### exporter les résultats de dds ####
 res <- results(dds)
 resultats_deseq <- data.frame(res)
 setDT(resultats_deseq, keep.rownames = TRUE)[]
