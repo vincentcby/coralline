@@ -170,3 +170,10 @@ plotPCA(vsd, intgroup=c("condition", "sample"))
 
 des <- rownames(logncsubset_minRowMeans)          # on donne la liste des isoformes DE et Fc a 4
 plotPCA(vsd[des,], c("condition","sample"), ntop = 1349)   # PCA des isoformes DE
+
+
+res <- results(dds)
+resultats_deseq <- data.frame(res)
+setDT(resultats_deseq, keep.rownames = TRUE)[]
+write_xlsx(resultats_deseq,"deseq_dds.xlsx")
+
