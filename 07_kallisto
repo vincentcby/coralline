@@ -2,7 +2,7 @@
 #PBS -q omp
 #PBS -o Output2
 #PBS -l ncpus=6
-#PBS -l mem=75gb
+#PBS -l mem=30gb
 #PBS -l walltime=01:10:00
 
 
