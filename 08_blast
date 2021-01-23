@@ -3,7 +3,7 @@
 #PBS -l ncpus=10
 #PBS -l mem=10gb
 #PBS -l walltime=10:10:00
-#PBS -o test_swiss_100
+
 
 
 CB_NAME=$(basename $PBS_JOBNAME)
@@ -20,7 +20,7 @@ cd $PBS_O_WORKDIR
 QUERY=$DATAWORK/centile_5.fasta
 
 BANK=/home/ref-bioinfo/beedeem/p/Uniprot_SwissProt/current/Uniprot_SwissProt/Uniprot_SwissProtM
-#BANK=/home/ref-bioinfo/beedeem/p/NCBI_nr/current/NCBI_nr/NCBI_nr
+
 
 OUT_FILE=Swissprot_annotation.txt
 
@@ -28,4 +28,4 @@ BLAST_PARAM="-evalue 1e-4"
 
 
 
-blastx -query "${QUERY}" -db "${BANK}" -out ${OUT_FILE} -max_target_seqs 1  ${BLAST_PARAM} -num_threads 10 -outfmt "6 qseqid salltitles sallacc pident length sblastnames evalue bitscore sseqid " 2>&1 | tee $SCRATCH/98_log_files/"$TIMESTAMP"_swiss_100.log
+blastx -query "${QUERY}" -db "${BANK}" -out ${OUT_FILE} -max_target_seqs 1 -maxhsps 1 ${BLAST_PARAM} -num_threads 10 -outfmt "6 qseqid salltitles sallacc pident length sblastnames evalue bitscore sseqid " 2>&1 | tee $SCRATCH/98_log_files/"$TIMESTAMP"_swiss_100.log
